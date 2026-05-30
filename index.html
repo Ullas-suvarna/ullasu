@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DairyPulse - Cooperative Milk Collection Ledger</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Firebase SDK Scripts (Compat Build) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+</head>
+<body>
+    <!-- App Wrapper -->
+    <div class="app-container">
+        
+        <!-- Sidebar Workspace Selector & SMS Logs -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-logo">
+                    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" class="pulse-icon">
+                        <path d="M12 22a7 7 0 0 0 7-7c0-4.3-7-11-7-11S5 10.7 5 15a7 7 0 0 0 7 7z" />
+                    </svg>
+                </div>
+                <h1 class="brand-name">DairyPulse</h1>
+            </div>
+
+            <!-- View Role Switcher -->
+            <div class="role-selector-card glass">
+                <span class="role-selector-label">Portal Workspace</span>
+                <div class="role-btn-group">
+                    <button class="role-btn active" id="roleAdminBtn" data-role="admin">Admin Portal</button>
+                    <button class="role-btn" id="roleFarmerBtn" data-role="farmer">Farmer Portal</button>
+                </div>
+            </div>
+
+            <!-- Portal Navigation (changes depending on active role) -->
+            <nav class="nav-menu">
+                <div class="nav-section-title" id="navRoleTitle">Admin Control</div>
+                
+                <div id="adminNavItems">
+                    <a href="#" class="nav-item active" data-target="admin-dashboard">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+                        <span>Collection Desk</span>
+                    </a>
+                    <a href="#" class="nav-item" data-target="admin-farmers">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        <span>Member Registry</span>
+                    </a>
+                </div>
+
+                <div id="farmerNavItems" class="hidden">
+                    <a href="#" class="nav-item" data-target="farmer-dashboard">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+                        <span>My Dashboard</span>
+                    </a>
+                    <a href="#" class="nav-item" data-target="farmer-ledger">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        <span>Receipt Archive</span>
+                    </a>
+                </div>
+            </nav>
+
+            <!-- SMS Gateway Simulator Panel -->
+            <div class="sms-simulator-panel glass">
+                <div class="sms-sim-header">
+                    <span>SMS Dispatch Simulator</span>
+                    <span class="pulse-indicator"></span>
+                </div>
+                <div class="sms-logs-wrapper" id="smsGatewayLogs">
+                    <div class="sms-log-empty">Waiting for transactions...</div>
+                </div>
+            </div>
+
+            <!-- Sidebar Footer -->
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="themeToggleBtn">
+                    <svg class="sun-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                    <svg class="moon-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                    <span class="theme-text">Toggle Theme</span>
+                </button>
+                <div class="user-profile">
+                    <div class="user-avatar">CO</div>
+                    <div class="user-info">
+                        <span class="user-name" id="userProfileName">Coop Admin</span>
+                        <span class="user-role" id="userProfileRole">Operator Desk</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Display Space -->
+        <main class="main-content">
+            <!-- Global Dashboard Telemetry Header -->
+            <header class="app-header">
+                <div class="header-title-container">
+                    <span class="header-subtitle" id="portalHeaderSubtitle">Cooperative Collection System</span>
+                    <h2 class="header-title" id="pageTitle">Collection Desk</h2>
+                </div>
+
+                <!-- Shift & DB Status Banner -->
+                <div class="barn-status-banner">
+                    <div class="status-metric">
+                        <span class="status-label">Database Sync</span>
+                        <div class="status-value-group">
+                            <span class="status-value" id="dbStatus">Offline</span>
+                            <span class="status-dot warning" id="dbStatusDot"></span>
+                        </div>
+                    </div>
+                    <div class="status-metric">
+                        <span class="status-label">Active Shift</span>
+                        <div class="status-value-group">
+                            <span class="status-value" id="currentShift">Morning</span>
+                            <span class="status-dot healthy" id="shiftIndicatorDot"></span>
+                        </div>
+                    </div>
+                    <div class="status-metric time-metric">
+                        <span class="status-label" id="currentDate">Saturday, May 30</span>
+                        <span class="status-value" id="currentTime">10:39 AM</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Global Toast alerts container -->
+            <div id="alertBanner" class="alert-banner hidden">
+                <div class="alert-content">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" class="alert-icon"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    <span id="alertMsg">System alert messages.</span>
+                </div>
+                <button class="alert-close" id="alertCloseBtn">&times;</button>
+            </div>
+
+            <!-- ==========================================
+                 A. ADMIN PANELS (Collection Desk Views)
+                 ========================================== -->
+            <div id="adminViewContainer" class="view-group">
+                <!-- Admin Dashboard View -->
+                <section id="admin-dashboardView" class="view-section active-view">
+                    <!-- Coop KPI Grid -->
+                    <div class="kpi-grid">
+                        <div class="kpi-card glass">
+                            <div class="kpi-header">
+                                <span class="kpi-title">Milk Collected Today</span>
+                                <div class="kpi-icon-container milk-accent">
+                                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22a7 7 0 0 0 7-7c0-4.3-7-11-7-11S5 10.7 5 15a7 7 0 0 0 7 7z"></path></svg>
+                                </div>
+                            </div>
+                            <div class="kpi-value-container">
+                                <h3 class="kpi-value" id="kpiCoopVolume">0.0 L</h3>
+                                <span class="kpi-trend text-muted" id="kpiCoopVolumeCount">0 collection entries</span>
+                            </div>
+                        </div>
+
+                        <div class="kpi-card glass">
+                            <div class="kpi-header">
+                                <span class="kpi-title">Avg Fat Percentage</span>
+                                <div class="kpi-icon-container cattle-accent">
+                                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                                </div>
+                            </div>
+                            <div class="kpi-value-container">
+                                <h3 class="kpi-value" id="kpiCoopFat">0.00%</h3>
+                                <span class="kpi-trend trend-up">Target: 4.0% base</span>
+                            </div>
+                        </div>
+
+                        <div class="kpi-card glass">
+                            <div class="kpi-header">
+                                <span class="kpi-title">Avg Solid-Not-Fat (SNF)</span>
+                                <div class="kpi-icon-container delivery-accent">
+                                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                </div>
+                            </div>
+                            <div class="kpi-value-container">
+                                <h3 class="kpi-value" id="kpiCoopSnf">0.00%</h3>
+                                <span class="kpi-trend trend-up">Target: 8.5% base</span>
+                            </div>
+                        </div>
+
+                        <div class="kpi-card glass">
+                            <div class="kpi-header">
+                                <span class="kpi-title">Payouts Incurred Today</span>
+                                <div class="kpi-icon-container revenue-accent">
+                                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                                </div>
+                            </div>
+                            <div class="kpi-value-container">
+                                <h3 class="kpi-value" id="kpiCoopPayout">$0.00</h3>
+                                <span class="kpi-trend trend-up">Pending bank release</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Shift Collection Form and Today's Records -->
+                    <div class="dashboard-split-row margin-top">
+                        <!-- Collection Log Entry Form -->
+                        <div class="form-container-card glass flex-1">
+                            <div class="card-header">
+                                <div>
+                                    <h4 class="card-title">New Milk Collection Entry</h4>
+                                    <p class="card-description">Fast data entry for morning/evening deliveries</p>
+                                </div>
+                            </div>
+                            <form id="milkCollectionForm" class="shift-entry-form">
+                                <div class="form-grid">
+                                    <div class="form-group span-full">
+                                        <label for="colFarmerId">Select Farmer</label>
+                                        <select id="colFarmerId" class="form-input select-filter" required>
+                                            <option value="" disabled selected>Choose a farmer...</option>
+                                            <!-- Populated dynamically -->
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="colShift">Shift Time</label>
+                                        <select id="colShift" class="form-input" required>
+                                            <option value="Morning">Morning Shift</option>
+                                            <option value="Evening">Evening Shift</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="colVolume">Volume (Liters)</label>
+                                        <input type="number" id="colVolume" class="form-input" min="0.5" max="500" step="0.1" placeholder="e.g. 15.2" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="colFat">Fat Content (%)</label>
+                                        <input type="number" id="colFat" class="form-input" min="2.0" max="10.0" step="0.1" value="4.0" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="colSnf">SNF Content (%)</label>
+                                        <input type="number" id="colSnf" class="form-input" min="6.0" max="12.0" step="0.1" value="8.5" required>
+                                    </div>
+                                </div>
+
+                                <!-- Dynamic calculations display card -->
+                                <div class="live-calc-card">
+                                    <div class="calc-row">
+                                        <span>Rate per Liter</span>
+                                        <strong id="liveRateVal">$0.00/L</strong>
+                                    </div>
+                                    <div class="calc-row highlighted">
+                                        <span>Total Amount Payable</span>
+                                        <strong id="liveTotalVal">$0.00</strong>
+                                    </div>
+                                </div>
+
+                                <div class="form-actions">
+                                    <button type="submit" class="btn btn-primary btn-full-width">
+                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                                        Submit Collection & SMS
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Today's Collections Log Table -->
+                        <div class="list-panel-card glass flex-2">
+                            <div class="card-header">
+                                <div>
+                                    <h4 class="card-title">Today's Shift Collection Records</h4>
+                                    <p class="card-description">Live digital archive of submissions for today</p>
+                                </div>
+                            </div>
+                            <div class="subs-table-wrapper">
+                                <table class="subs-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Farmer</th>
+                                            <th>Shift</th>
+                                            <th>Metrics</th>
+                                            <th>Rate/Total</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="todayCollectionsTableBody">
+                                        <!-- Populated dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Admin Farmers View -->
+                <section id="admin-farmersView" class="view-section">
+                    <div class="view-actions-bar">
+                        <div class="search-filter-group">
+                            <input type="text" id="farmerSearchInput" class="form-input search-input" placeholder="Search by Farmer ID, Name, or Contact...">
+                        </div>
+                        <button class="btn btn-primary" id="openAddFarmerModalBtn">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            Add New Farmer
+                        </button>
+                    </div>
+
+                    <!-- Farmers Directory Table -->
+                    <div class="glass" style="padding: 24px;">
+                        <div class="subs-table-wrapper">
+                            <table class="subs-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Name</th>
+                                        <th>Contact Number</th>
+                                        <th>Milk Supplied (L)</th>
+                                        <th>Estimated Balance</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="farmersTableBody">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- ==========================================
+                 B. FARMER PANELS (Member Self-Service View)
+                 ========================================== -->
+            <div id="farmerViewContainer" class="view-group hidden">
+                <!-- Farmer Switcher Banner -->
+                <div class="farmer-select-banner glass">
+                    <label for="farmerPortalSelect">View Member Dashboard:</label>
+                    <select id="farmerPortalSelect" class="form-input">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+
+                <!-- Farmer Dashboard View -->
+                <section id="farmer-dashboardView" class="view-section">
+                    <div class="kpi-grid">
+                        <div class="kpi-card glass">
+                            <div class="kpi-header">
+                                <span class="kpi-title">Milk Volume Delivered</span>
+                                <div class="kpi-icon-container milk-accent">
+                                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22a7 7 0 0 0 7-7c0-4.3-7-11-7-11S5 10.7 5 15a7 7 0 0 0 7 7z"></path></svg>
+                                </div>
+                            </div>
+                            <div class="kpi-value-container">
+                                <h3 class="kpi-value" id="kpiFarmerVolume">0.0 L</h3>
+                                <span class="kpi-trend text-muted" id="kpiFarmerCollectionsCount">0 entries this month</span>
+                            </div>
+                        </div>
+
+                        <div class="kpi-card glass">
+                            <div class="kpi-header">
+                                <span class="kpi-title">Avg Quality / Fat</span>
+                                <div class="kpi-icon-container cattle-accent">
+                                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                                </div>
+                            </div>
+                            <div class="kpi-value-container">
+                                <h3 class="kpi-value" id="kpiFarmerFat">0.00%</h3>
+                                <span class="kpi-trend text-muted" id="kpiFarmerSnf">Avg SNF: 0.00%</span>
+                            </div>
+                        </div>
+
+                        <div class="kpi-card glass">
+                            <div class="kpi-header">
+                                <span class="kpi-title">Total Monthly Earnings</span>
+                                <div class="kpi-icon-container revenue-accent">
+                                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                                </div>
+                            </div>
+                            <div class="kpi-value-container">
+                                <h3 class="kpi-value" id="kpiFarmerEarnings">$0.00</h3>
+                                <span class="kpi-trend trend-up">Direct bank settlement</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Farmer Performance Analytics Charts (Fat/SNF and Payout trends) -->
+                    <div class="dashboard-split-row margin-top">
+                        <!-- Quality Trend Line (Fat / SNF trends) -->
+                        <div class="chart-container-card glass">
+                            <div class="card-header">
+                                <div>
+                                    <h4 class="card-title">Milk Quality Auditing Trend</h4>
+                                    <p class="card-description">Fluctuations of Fat % & SNF % over submissions</p>
+                                </div>
+                                <div class="card-actions chart-legend">
+                                    <span class="legend-dot" style="background-color: var(--primary);"></span> Fat %
+                                    <span class="legend-dot" style="background-color: var(--accent-info);"></span> SNF %
+                                </div>
+                            </div>
+                            <div class="chart-body" id="farmerQualityChartWrapper">
+                                <!-- Generated Dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Earnings trend chart -->
+                        <div class="chart-container-card glass">
+                            <div class="card-header">
+                                <div>
+                                    <h4 class="card-title">Collection Payout Trends</h4>
+                                    <p class="card-description">Income progression generated per delivery</p>
+                                </div>
+                                <div class="card-actions chart-legend">
+                                    <span class="legend-dot" style="background-color: var(--accent-warning);"></span> Amount Paid
+                                </div>
+                            </div>
+                            <div class="chart-body" id="farmerEarningsChartWrapper">
+                                <!-- Generated Dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Farmer Ledger Archive View -->
+                <section id="farmer-ledgerView" class="view-section">
+                    <div class="glass" style="padding: 24px;">
+                        <div class="card-header">
+                            <div>
+                                <h4 class="card-title">Historical Milk Delivery Ledger</h4>
+                                <p class="card-description">Digital record of all milk collections for auditing</p>
+                            </div>
+                        </div>
+                        <div class="subs-table-wrapper">
+                            <table class="subs-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date & Time</th>
+                                        <th>Shift</th>
+                                        <th>Quantity (L)</th>
+                                        <th>Quality (Fat/SNF)</th>
+                                        <th>Rate per L</th>
+                                        <th>Total Payout</th>
+                                        <th>Receipt Slip</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="farmerLedgerTableBody">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- ==========================================
+         C. MODAL OVERLAYS & DIALOGS
+         ========================================== -->
+
+    <!-- Add Farmer Modal -->
+    <div class="modal-backdrop" id="addFarmerModal">
+        <div class="modal-card glass">
+            <div class="modal-header">
+                <h3>Register Cooperative Member</h3>
+                <button class="modal-close" id="closeAddFarmerModalBtn">&times;</button>
+            </div>
+            <form id="addFarmerForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="newFarmerId">Farmer ID (Tag)</label>
+                        <input type="text" id="newFarmerId" class="form-input" placeholder="e.g. F-109" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newFarmerName">Full Name</label>
+                        <input type="text" id="newFarmerName" class="form-input" placeholder="e.g. Ramesh Kumar" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newFarmerPhone">Contact Phone (for SMS)</label>
+                        <input type="tel" id="newFarmerPhone" class="form-input" placeholder="e.g. +91 98765 43210" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newFarmerBank">Bank Account No.</label>
+                        <input type="text" id="newFarmerBank" class="form-input" placeholder="e.g. SBI-0098432" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" id="cancelAddFarmerBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Register Farmer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Digital Receipt Modal (Printable Sheet) -->
+    <div class="modal-backdrop" id="receiptModal">
+        <div class="modal-card receipt-modal-card">
+            <!-- Receipt Printable Component -->
+            <div class="receipt-paper" id="receiptPrintArea">
+                <div class="receipt-header">
+                    <div class="receipt-logo">
+                        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M12 22a7 7 0 0 0 7-7c0-4.3-7-11-7-11S5 10.7 5 15a7 7 0 0 0 7 7z" />
+                        </svg>
+                    </div>
+                    <h3 class="receipt-title">DAIRYPULSE COOPERATIVE</h3>
+                    <p class="receipt-subtitle">Milk Collection Center Receipt</p>
+                    <div class="receipt-divider"></div>
+                </div>
+
+                <div class="receipt-meta">
+                    <div class="receipt-meta-row">
+                        <span>Receipt ID:</span>
+                        <strong id="recReceiptId" class="mono">DP-INV-0000</strong>
+                    </div>
+                    <div class="receipt-meta-row">
+                        <span>Timestamp:</span>
+                        <span id="recTimestamp">2026-05-30 10:39:46</span>
+                    </div>
+                    <div class="receipt-meta-row">
+                        <span>Shift:</span>
+                        <strong id="recShift">Morning</strong>
+                    </div>
+                    <div class="receipt-meta-row">
+                        <span>Member ID:</span>
+                        <strong id="recFarmerId">F-000</strong>
+                    </div>
+                    <div class="receipt-meta-row">
+                        <span>Member Name:</span>
+                        <span id="recFarmerName">Farmer Name</span>
+                    </div>
+                </div>
+
+                <div class="receipt-divider"></div>
+
+                <div class="receipt-details">
+                    <div class="receipt-details-row title-row">
+                        <span>Description</span>
+                        <span>Value</span>
+                    </div>
+                    <div class="receipt-details-row">
+                        <span>Milk Volume</span>
+                        <strong id="recVolume">0.0 L</strong>
+                    </div>
+                    <div class="receipt-details-row">
+                        <span>Fat Percentage</span>
+                        <span id="recFat">0.00%</span>
+                    </div>
+                    <div class="receipt-details-row">
+                        <span>SNF Percentage</span>
+                        <span id="recSnf">0.00%</span>
+                    </div>
+                    <div class="receipt-details-row">
+                        <span>Calculated Rate/L</span>
+                        <span id="recRate">$0.00/L</span>
+                    </div>
+                </div>
+
+                <div class="receipt-divider"></div>
+
+                <div class="receipt-total-card">
+                    <span class="total-label">TOTAL PAYABLE AMOUNT</span>
+                    <h2 class="total-value" id="recTotalAmount">$0.00</h2>
+                </div>
+
+                <div class="receipt-footer">
+                    <div class="receipt-divider"></div>
+                    <p>SMS slip dispatched to registered mobile.</p>
+                    <p class="receipt-thankyou">Thank you for supplying farm-fresh quality!</p>
+                </div>
+            </div>
+
+            <!-- Receipt controls -->
+            <div class="modal-footer no-print">
+                <button type="button" class="btn btn-outline" id="closeReceiptModalBtn">Close</button>
+                <button type="button" class="btn btn-primary" id="printReceiptBtn">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                    Print Slip
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast Element -->
+    <div class="toast" id="toastNotification">
+        <span class="toast-text" id="toastMessage">Completed successfully</span>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
